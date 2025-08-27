@@ -1,0 +1,61 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "linear-gradient(180deg, #E9D5FF, #C7D2FE)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 50,
+  },
+  noise: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.05,
+    top: -10,
+    left: -10,
+  },
+  content: { alignItems: "center", gap: 20, paddingHorizontal: 30 },
+  icon: { width: 90, height: 90, borderRadius: 25, marginTop: 10 },
+  title: {
+    fontFamily: "Outfit_700Bold",
+    fontSize: 42,
+    color: "#111827",
+    textAlign: "center",
+    letterSpacing: 1,
+  },
+  tagline: {
+    fontFamily: "Outfit_500Medium",
+    fontSize: 18,
+    color: "#374151",
+    textAlign: "center",
+    lineHeight: 26,
+    marginBottom: 10,
+  },
+  illustration: { width: 240, height: 240, resizeMode: "contain" },
+  buttons: { width: "100%", alignItems: "center", gap: 20, marginTop: 10 },
+  primaryBtn: {
+    backgroundColor: "#4F46E5",
+    paddingVertical: 16,
+    borderRadius: 40,
+    width: 260,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  primaryBtnText: {
+    fontFamily: "Outfit_700Bold",
+    color: "#FFF",
+    fontSize: 18,
+    letterSpacing: 0.5,
+  },
+  secondaryText: {
+    fontFamily: "Outfit_500Medium",
+    fontSize: 16,
+    color: "#4F46E5",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+});
