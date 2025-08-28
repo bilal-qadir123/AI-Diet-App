@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
 import json
 
@@ -16,6 +16,18 @@ db = mysql.connector.connect(
 
 app = Flask(__name__)
 CORS(app)
+
+@app.route('/check-email', methods=['POST'])
+def check_email():
+    data = request.get_json()
+    email = data.get("email")
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+    exists = cursor.fetchone() is not None
+    cursor.close()
+    return jsonify({"exists": exists}), 200
 
 @app.route('/receive-info', methods=['POST'])
 def receive_info():
@@ -60,6 +72,22 @@ def receive_info():
     cursor.close()
 
     return jsonify({"exists": False, "message": "User info received and saved successfully"}), 200
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT id, password_hash FROM users WHERE email = %s", (email,))
+    user = cursor.fetchone()
+    cursor.close()
+
+    if not user or not check_password_hash(user["password_hash"], password):
+        return jsonify({"success": False, "error": "Incorrect email or password"}), 401
+
+    return jsonify({"success": True, "message": "Login successful", "user_id": user["id"]}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

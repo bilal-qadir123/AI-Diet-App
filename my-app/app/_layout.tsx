@@ -20,6 +20,9 @@ export default function RootLayout() {
       await Asset.loadAsync([
         require("../assets/images/human.png"),
         require("../assets/images/logo.png"),
+        require("../assets/images/kid-standing.png"),
+        require("../assets/images/kid-eating.png"),
+        require("../assets/images/door.png"),
         require("../assets/images/food1-min.png"),
         require("../assets/images/food2-min.png"),
         require("../assets/images/food3-min.png"),

@@ -32,7 +32,9 @@ export default function Welcome() {
           >
             <Text style={styles.primaryBtnText}>Get Started</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity
+          onPress={() => router.push("/login")}
+          >
             <Text style={styles.secondaryText}>Already have an account?</Text>
           </TouchableOpacity>
         </View>

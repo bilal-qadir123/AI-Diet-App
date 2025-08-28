@@ -2,26 +2,39 @@ import { Platform, StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   container: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 130,
-    paddingVertical: 60,
+    marginTop: 50,
+    paddingVertical: 20,
     paddingHorizontal: 20,
   },
+  
   content: {
     alignItems: "center",
     backgroundColor: "white",
     borderRadius: 30,
+    elevation: 1,
     paddingVertical: 50,
     paddingHorizontal: 50,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
-    elevation: 10,
     width: "100%",
     maxWidth: 300,
+  },
+  loginContent: {
+    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 30,
+    elevation: 1,
+    marginTop: 50,
+    paddingVertical: 50,
+    paddingHorizontal: 50,
+    width: "100%",
+    maxWidth: 300,
+  },
+  kid: {
+    width: 100,
+    height: 150,
+    borderRadius: 50,
+    marginBottom: 20,
   },
   heading: {
     fontFamily: "Outfit_700Bold",
@@ -31,7 +44,7 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
   prompt: {
-    width: 250,
+    width: 220,
     fontFamily: "Outfit_500Medium",
     fontSize: 16,
     color: "#374151",
@@ -53,17 +66,16 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#D1D5DB",
   },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1,
+  },  
   primaryBtn: {
     backgroundColor: "#4F46E5",
     paddingVertical: 10,
     borderRadius: 30,
     width: 230,
     alignItems: "center",
-    shadowColor: "#4F46E5",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
-    elevation: 8,
   },
   primaryBtnText: {
     fontFamily: "Outfit_700Bold",
@@ -110,7 +122,7 @@ export const styles = StyleSheet.create({
     color: "#374151",
     textAlign: "left",
     marginBottom: 8,
-    width: '100%',
+    width: "100%",
   },
   passwordCriteriaItem: {
     fontFamily: "Outfit_500Medium",
