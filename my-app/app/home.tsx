@@ -1,9 +1,18 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { View, Text, Image, TouchableOpacity } from "react-native";
 import HomeBackground from "../styles/HomeBackground";
 import { useRouter } from "expo-router";
 import { styles } from "../styles/Home";
+import { useAuth } from "./context/AuthContext";
+import { useEffect } from "react";
 export default function Welcome() {
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/main");
+    }
+  }, [loading, user, router]);
 
   return (
     <View style={styles.container}>

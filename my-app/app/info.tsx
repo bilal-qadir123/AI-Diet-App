@@ -1,20 +1,11 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Animated,
-  TextInput,
-  ScrollView,
-  Platform,
-  KeyboardAvoidingView,
-  Alert,
-  Image,
-} from "react-native";
+import { View, Text, TouchableOpacity, Animated, TextInput, ScrollView, Platform, KeyboardAvoidingView, Alert, Image } from "react-native";
 import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { styles } from "../styles/Info";
 import { Picker } from "@react-native-picker/picker";
-import { Ionicons } from "@expo/vector-icons";
 import HomeBackground from "@/styles/HomeBackground";
+import { z } from "zod";
+import { useAuth } from "./context/AuthContext";
+import { useRouter } from "expo-router";
 
 export default function Info() {
   const [step, setStep] = useState(0);
@@ -33,20 +24,23 @@ export default function Info() {
   const [healthConditions, setHealthConditions] = useState<string[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const totalSteps = 11;
-  const progress = ((step + 1) / totalSteps) * 100;
+  const { user } = useAuth();
+  const router = useRouter();
 
-  const kidEating = useMemo(
-    () => require("../assets/images/kid-eating.png"),
-    []
-  );
-  const kidStanding = useMemo(
-    () => require("../assets/images/kid-standing.png"),
-    []
-  );
+  const totalSteps = 11;
+  const progress = step === 0 ? 0 : (step / totalSteps) * 100;
+
+  const kidEating = useMemo(() => require("../assets/images/kid-eating.png"), []);
+  const kidStanding = useMemo(() => require("../assets/images/kid-standing.png"), []);
+  
+  useEffect(() => {
+    if (user) {
+      router.replace("/main");
+    }
+  }, [user, router]);
 
   const genderOptions = useMemo(
     () => [
@@ -63,10 +57,7 @@ export default function Info() {
       { label: "Select activity level", value: "" },
       { label: "Sedentary (little or no exercise)", value: "Sedentary" },
       { label: "Lightly active (1–3 days/week)", value: "Lightly active" },
-      {
-        label: "Moderately active (3–5 days/week)",
-        value: "Moderately active",
-      },
+      { label: "Moderately active (3–5 days/week)", value: "Moderately active" },
       { label: "Very active (6–7 days/week)", value: "Very active" },
     ],
     []
@@ -83,20 +74,12 @@ export default function Info() {
   );
 
   const onFadeIn = useCallback(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
   }, [fadeAnim]);
 
   const onFadeOut = useCallback(
     (callback: () => void) => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
+      Animated.timing(fadeAnim, { toValue: 0, duration: 500, useNativeDriver: true }).start(({ finished }) => {
         if (finished) callback();
       });
     },
@@ -110,89 +93,101 @@ export default function Info() {
 
   useEffect(() => {
     progressAnim.stopAnimation();
-    Animated.timing(progressAnim, {
-      toValue: progress,
-      duration: 400,
-      useNativeDriver: false,
-    }).start();
+    Animated.timing(progressAnim, { toValue: progress, duration: 400, useNativeDriver: false }).start();
   }, [progress, progressAnim]);
 
+  const stepSchemas = useMemo<Record<number, z.ZodSchema>>(
+    () => ({
+      1: z.object({
+        name: z
+          .string()
+          .min(1, "Enter your name")
+          .min(2, "Name must be at least 2 characters")
+          .refine(v => !/\d/.test(v.trim()), "Name cannot contain numbers"),
+      }),
+      2: z.object({
+        age: z.preprocess(
+          v => (typeof v === "string" ? Number(v) : v),
+          z
+            .number()
+            .int("Enter valid age (10-120)")
+            .min(10, "Enter valid age (10-120)")
+            .max(120, "Enter valid age (10-120)")
+        ),
+      }),
+      3: z.object({
+        gender: z.string().min(1, "Select your gender"),
+      }),
+      4: z.object({
+        weight: z.preprocess(
+          v => (typeof v === "string" ? parseFloat(v) : v),
+          z.number().min(30, "Weight 30-300kg").max(300, "Weight 30-300kg")
+        ),
+        height: z.preprocess(
+          v => (typeof v === "string" ? parseFloat(v) : v),
+          z.number().min(90, "Height 90-250cm").max(250, "Height 90-250cm")
+        ),
+      }),
+      5: z.object({
+        activityLevel: z.string().min(1, "Select activity level"),
+      }),
+      6: z.object({
+        primaryGoal: z.string().min(1, "Select your primary goal"),
+      }),
+      7: z.object({
+        diet: z.string().min(1, "Select diet preference"),
+        allergies: z.string().optional(),
+      }),
+      8: z.object({}),
+      9: z.object({
+        email: z.string().email("Enter a valid email"),
+      }),
+      10: z.object({
+        password: z
+          .string()
+          .min(6, "The password must contain at least 6 characters")
+          .max(20, "The password must contain at most 20 characters")
+          .refine(v => /[0-9]/.test(v), "The password must contain one number")
+          .refine(v => /[A-Z]/.test(v), "The password must contain one uppercase letter")
+          .refine(v => /[^A-Za-z0-9]/.test(v), "The password must contain at least one special character"),
+      }),
+    }),
+    []
+  );
+  
   const validateStep = useCallback(() => {
-    const newErrors: Record<string, string> = {};
-    switch (step) {
-      case 1: {
-        if (name.length === 0) newErrors.name = "Enter your name";
-        if (!name.trim() || name.trim().length < 2)
-          newErrors.name = "Name must be at least 2 characters";
-        if (/\d/.test(name.trim()))
-          newErrors.name = "Name cannot contain numbers";
-        break;
+    const schema = stepSchemas[step] ?? z.object({});
+    const data = {
+      name,
+      age,
+      gender,
+      weight,
+      height,
+      activityLevel,
+      primaryGoal,
+      diet,
+      allergies,
+      email,
+      password,
+    };
+  
+    const res = schema.safeParse(data);
+  
+    if (res.success) {
+      if (step === 7 && (!allergies || !allergies.trim())) {
+        setAllergies("None");
       }
-      case 2: {
-        const ageNum = parseInt(age);
-        if (!age.trim() || isNaN(ageNum) || ageNum < 10 || ageNum > 120)
-          newErrors.age = "Enter valid age (10-120)";
-        break;
+      setErrors({});
+      return true;
+    } else {
+      const newErrors: Record<string, string> = {};
+      for (const issue of res.error.issues) {
+        const key = issue.path[0] as string | undefined;
+        if (key && !newErrors[key]) newErrors[key] = issue.message;
       }
-      case 3: {
-        if (!gender) newErrors.gender = "Select your gender";
-        break;
-      }
-      case 4: {
-        const weightNum = parseFloat(weight);
-        const heightNum = parseFloat(height);
-        if (
-          !weight.trim() ||
-          isNaN(weightNum) ||
-          weightNum < 30 ||
-          weightNum > 300
-        )
-          newErrors.weight = "Weight 30-300kg";
-        if (
-          !height.trim() ||
-          isNaN(heightNum) ||
-          heightNum < 90 ||
-          heightNum > 250
-        )
-          newErrors.height = "Height 90-250cm";
-        break;
-      }
-      case 5: {
-        if (!activityLevel) newErrors.activityLevel = "Select activity level";
-        break;
-      }
-      case 6: {
-        if (!primaryGoal) newErrors.primaryGoal = "Select your primary goal";
-        break;
-      }
-      case 7: {
-        if (!diet) newErrors.diet = "Select diet preference";
-        if (!allergies.trim()) setAllergies("None");
-        break;
-      }
-      case 8: {
-        break;
-      }
-      case 9: {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-          newErrors.email = "Enter a valid email";
-        break;
-      }
-      case 10: {
-        const passwordErrors: string[] = [];
-        if (password.length < 6) passwordErrors.push("at least 6 characters");
-        if (password.length > 20) passwordErrors.push("at most 20 characters");
-        if (!/[0-9]/.test(password)) passwordErrors.push("one number");
-        if (!/[A-Z]/.test(password))
-          passwordErrors.push("one uppercase letter");
-        if (passwordErrors.length > 0)
-          newErrors.password =
-            "Password must contain " + passwordErrors.join(", ") + ".";
-        break;
-      }
+      setErrors(newErrors);
+      return false;
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   }, [
     step,
     name,
@@ -206,7 +201,8 @@ export default function Info() {
     allergies,
     email,
     password,
-  ]);
+    stepSchemas,
+  ]);  
 
   const prevStep = useCallback(() => {
     if (step > 0) {
@@ -215,8 +211,27 @@ export default function Info() {
   }, [step, onFadeOut]);
 
   const nextStep = useCallback(() => {
-    if (validateStep()) onFadeOut(() => setStep((s) => s + 1));
-  }, [validateStep, onFadeOut]);
+    if (!validateStep()) return;
+  
+    const handleFadeOut = (callback: () => void) =>
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(callback);
+  
+    if (step === totalSteps - 1) {
+      Animated.timing(progressAnim, {
+        toValue: ((step + 1) / totalSteps) * 100,
+        duration: 400,
+        useNativeDriver: false,
+      }).start(() => {
+        handleFadeOut(() => setStep((s) => s + 1));
+      });
+    } else {
+      handleFadeOut(() => setStep((s) => s + 1));
+    }
+  }, [step, totalSteps, progressAnim, fadeAnim, validateStep]);  
 
   const checkEmail = useCallback(async () => {
     try {
@@ -258,9 +273,7 @@ export default function Info() {
             primaryGoal,
             diet,
             allergies,
-            healthConditions: healthConditions.length
-              ? healthConditions
-              : ["None"],
+            healthConditions: healthConditions.length ? healthConditions : ["None"],
             email,
             password,
           }),
@@ -270,27 +283,9 @@ export default function Info() {
         Alert.alert("Error", "Failed to submit your information.");
       }
     }
-  }, [
-    validateStep,
-    healthConditions,
-    name,
-    age,
-    gender,
-    weight,
-    height,
-    activityLevel,
-    primaryGoal,
-    diet,
-    allergies,
-    email,
-    password,
-    nextStep,
-  ]);
+  }, [validateStep, healthConditions, name, age, gender, weight, height, activityLevel, primaryGoal, diet, allergies, email, password, nextStep]);
 
-  const webCursorStyle = useMemo(
-    () => (Platform.OS === "web" ? { cursor: "pointer" } : null),
-    []
-  );
+  const webCursorStyle = useMemo(() => (Platform.OS === "web" ? { cursor: "pointer" } : null), []);
 
   const renderInputStep = useCallback(
     (title: string, inputProps: any, errorKey?: string) => (
@@ -300,121 +295,52 @@ export default function Info() {
           <Text style={styles.heading}>{title}</Text>
           <TextInput
             {...inputProps}
-            style={[
-              styles.input,
-              errorKey && errors[errorKey] ? styles.inputError : null,
-            ]}
+            style={[styles.input, errorKey && errors[errorKey] ? styles.inputError : null]}
             placeholderTextColor="#9CA3AF"
           />
-          {errorKey && errors[errorKey] ? (
-            <Text style={styles.errorText}>{errors[errorKey]}</Text>
-          ) : null}
-          <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              { marginTop: 20 },
-              webCursorStyle as any,
-            ]}
-            onPress={nextStep}
-          >
+          {errorKey && errors[errorKey] ? <Text style={styles.errorText}>{errors[errorKey]}</Text> : null}
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }, webCursorStyle as any]} onPress={nextStep}>
             <Text style={styles.primaryBtnText}> Next → </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              { marginTop: 10 },
-              webCursorStyle as any,
-            ]}
-            onPress={prevStep}
-          >
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }, webCursorStyle as any]} onPress={prevStep}>
             <Text style={styles.primaryBtnText}> ← Back </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
     ),
-    [errors, kidEating, nextStep, webCursorStyle]
+    [errors, kidEating, nextStep, prevStep, webCursorStyle]
   );
 
   const renderPickerStep = useCallback(
-    (
-      title: string,
-      selectedValue: string,
-      setValue: (v: string) => void,
-      options: { label: string; value: string }[],
-      errorKey?: string
-    ) => (
+    (title: string, selectedValue: string, setValue: (v: string) => void, options: { label: string; value: string }[], errorKey?: string) => (
       <Animated.View style={{ alignItems: "center", width: "100%" }}>
         <View style={styles.content}>
           <Image source={kidEating} style={styles.kid} />
           <Text style={styles.heading}>{title}</Text>
-          <View
-            style={[
-              styles.pickerWrapper,
-              errorKey && errors[errorKey] ? styles.inputError : null,
-            ]}
-          >
-            <Picker
-              selectedValue={selectedValue}
-              onValueChange={(val) => setValue(val)}
-              style={styles.picker}
-            >
+          <View style={[styles.pickerWrapper, errorKey && errors[errorKey] ? styles.inputError : null]}>
+            <Picker selectedValue={selectedValue} onValueChange={(val) => setValue(val)} style={styles.picker}>
               {options.map((opt) => (
-                <Picker.Item
-                  key={opt.value || opt.label}
-                  label={opt.label}
-                  value={opt.value}
-                />
+                <Picker.Item key={opt.value || opt.label} label={opt.label} value={opt.value} />
               ))}
             </Picker>
           </View>
-          {errorKey && errors[errorKey] ? (
-            <Text style={styles.errorText}>{errors[errorKey]}</Text>
-          ) : null}
-          <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              { marginTop: 20 },
-              webCursorStyle as any,
-            ]}
-            onPress={nextStep}
-          >
+          {errorKey && errors[errorKey] ? <Text style={styles.errorText}>{errors[errorKey]}</Text> : null}
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }, webCursorStyle as any]} onPress={nextStep}>
             <Text style={styles.primaryBtnText}> Next → </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              { marginTop: 10 },
-              webCursorStyle as any,
-            ]}
-            onPress={prevStep}
-          >
+          <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }, webCursorStyle as any]} onPress={prevStep}>
             <Text style={styles.primaryBtnText}> ← Back </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
     ),
-    [errors, kidEating, nextStep, webCursorStyle]
+    [errors, kidEating, nextStep, prevStep, webCursorStyle]
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
-    >
-      <HomeBackground
-        style={{
-          position: "absolute",
-          top: -130,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}>
+      <HomeBackground style={{ position: "absolute", top: -130, left: 0, right: 0, bottom: 0 }} />
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.progressBarContainer}>
           <Animated.View
             style={[
@@ -433,15 +359,9 @@ export default function Info() {
           <Animated.View style={{ alignItems: "center", width: "100%" }}>
             <View style={styles.content}>
               <Image source={kidStanding} style={styles.kid} />
-              <Text style={styles.heading}>Hey there, I'm Stickr!</Text>
-              <Text style={styles.prompt}>
-                A few fun questions coming your way! 😄 {"\n"} Don’t worry it’s
-                quick and all about YOU!
-              </Text>
-              <TouchableOpacity
-                style={[styles.primaryBtn, webCursorStyle as any]}
-                onPress={nextStep}
-              >
+              <Text style={styles.heading}>Hey there, I&apos;m Stickr!</Text>
+              <Text style={styles.prompt}>A few fun questions coming your way! 😄 {"\n"} Don’t worry it’s quick and all about YOU!</Text>
+              <TouchableOpacity style={[styles.primaryBtn, webCursorStyle as any]} onPress={nextStep}>
                 <Text style={styles.primaryBtnText}>I’m Excited!</Text>
               </TouchableOpacity>
             </View>
@@ -471,22 +391,13 @@ export default function Info() {
             "age"
           )}
 
-        {step === 3 &&
-          renderPickerStep(
-            "Heels 👠 or sneakers 👟?",
-            gender,
-            setGender,
-            genderOptions,
-            "gender"
-          )}
+        {step === 3 && renderPickerStep("Heels 👠 or sneakers 👟?", gender, setGender, genderOptions, "gender")}
 
         {step === 4 && (
           <Animated.View style={{ alignItems: "center", width: "100%" }}>
             <View style={styles.content}>
               <Image source={kidEating} style={styles.kid} />
-              <Text style={styles.heading}>
-                How heavy? ⚖️ {"\n"}How tall? 🗼
-              </Text>
+              <Text style={styles.heading}>How heavy? ⚖️ {"\n"}How tall? 🗼</Text>
               <TextInput
                 style={[styles.input, errors.weight ? styles.inputError : null]}
                 placeholder="Weight (kg)"
@@ -495,94 +406,44 @@ export default function Info() {
                 value={weight}
                 onChangeText={setWeight}
               />
-              {errors.weight ? (
-                <Text style={styles.errorText}>{errors.weight}</Text>
-              ) : null}
+              {errors.weight ? <Text style={styles.errorText}>{errors.weight}</Text> : null}
               <TextInput
-                style={[
-                  styles.input,
-                  { marginTop: 12 },
-                  errors.height ? styles.inputError : null,
-                ]}
+                style={[styles.input, { marginTop: 12 }, errors.height ? styles.inputError : null]}
                 placeholder="Height (cm)"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numeric"
                 value={height}
                 onChangeText={setHeight}
               />
-              {errors.height ? (
-                <Text style={styles.errorText}>{errors.height}</Text>
-              ) : null}
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 20 },
-                  webCursorStyle as any,
-                ]}
-                onPress={nextStep}
-              >
+              {errors.height ? <Text style={styles.errorText}>{errors.height}</Text> : null}
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }, webCursorStyle as any]} onPress={nextStep}>
                 <Text style={styles.primaryBtnText}> Next → </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 10 },
-                  webCursorStyle as any,
-                ]}
-                onPress={prevStep}
-              >
-                <Text style={styles.primaryBtnText}> ← Back </Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }, webCursorStyle as any]} onPress={prevStep}>
+            <Text style={styles.primaryBtnText}> ← Back </Text>
+          </TouchableOpacity>
             </View>
           </Animated.View>
         )}
 
-        {step === 5 &&
-          renderPickerStep(
-            "What’s your daily vibe? 💤 or 🏃‍♂️?",
-            activityLevel,
-            setActivityLevel,
-            activityOptions,
-            "activityLevel"
-          )}
+        {step === 5 && renderPickerStep("What’s your daily vibe? 💤 or 🏃‍♂️?", activityLevel, setActivityLevel, activityOptions, "activityLevel")}
 
-        {step === 6 &&
-          renderPickerStep(
-            "What’s the 🎯? Lose, gain, or maintain?",
-            primaryGoal,
-            setPrimaryGoal,
-            goalOptions,
-            "primaryGoal"
-          )}
+        {step === 6 && renderPickerStep("What’s the 🎯? Lose, gain, or maintain?", primaryGoal, setPrimaryGoal, goalOptions, "primaryGoal")}
 
         {step === 7 && (
           <Animated.View style={{ alignItems: "center", width: "100%" }}>
             <View style={styles.content}>
               <Image source={kidEating} style={styles.kid} />
               <Text style={styles.heading}>What’s your foodie style?</Text>
-              <View
-                style={[
-                  styles.pickerWrapper,
-                  errors.diet ? styles.inputError : null,
-                ]}
-              >
-                <Picker
-                  selectedValue={diet}
-                  onValueChange={(val) => setDiet(val)}
-                  style={styles.picker}
-                >
+              <View style={[styles.pickerWrapper, errors.diet ? styles.inputError : null]}>
+                <Picker selectedValue={diet} onValueChange={(val) => setDiet(val)} style={styles.picker}>
                   <Picker.Item label="Select diet" value="" />
                   <Picker.Item label="Non-Vegetarian" value="Non-Vegetarian" />
                   <Picker.Item label="Vegetarian" value="Vegetarian" />
-                  <Picker.Item
-                    label="No restrictions"
-                    value="No restrictions"
-                  />
+                  <Picker.Item label="No restrictions" value="No restrictions" />
                 </Picker>
               </View>
-              {errors.diet ? (
-                <Text style={styles.errorText}>{errors.diet}</Text>
-              ) : null}
+              {errors.diet ? <Text style={styles.errorText}>{errors.diet}</Text> : null}
               <TextInput
                 style={[styles.input, { marginTop: 12 }]}
                 placeholder="Intolerances (optional)"
@@ -590,26 +451,12 @@ export default function Info() {
                 value={allergies}
                 onChangeText={setAllergies}
               />
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 20 },
-                  webCursorStyle as any,
-                ]}
-                onPress={nextStep}
-              >
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 20 }, webCursorStyle as any]} onPress={nextStep}>
                 <Text style={styles.primaryBtnText}> Next → </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 10 },
-                  webCursorStyle as any,
-                ]}
-                onPress={prevStep}
-              >
-                <Text style={styles.primaryBtnText}> ← Back </Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }, webCursorStyle as any]} onPress={prevStep}>
+            <Text style={styles.primaryBtnText}> ← Back </Text>
+          </TouchableOpacity>
             </View>
           </Animated.View>
         )}
@@ -624,39 +471,21 @@ export default function Info() {
                 placeholder="Diabetes, Hypertension, Heart disease, Other"
                 placeholderTextColor="#9CA3AF"
                 value={healthConditions.join(", ")}
-                onChangeText={(text) =>
-                  setHealthConditions(
-                    text.split(",").map((item) => item.trim())
-                  )
-                }
+                onChangeText={(text) => setHealthConditions(text.split(",").map((item) => item.trim()))}
               />
               <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 20 },
-                  webCursorStyle as any,
-                ]}
+                style={[styles.primaryBtn, { marginTop: 20 }, webCursorStyle as any]}
                 onPress={nextStep}
               >
-                <Text style={styles.primaryBtnText}>
-                  {healthConditions.filter(
-                    (item) =>
-                      item.trim() !== "" && item.toLowerCase() !== "none"
-                  ).length > 0
-                    ? "Next"
-                    : "Skip"}
-                </Text>
+                      <Text style={styles.primaryBtnText}>
+        {healthConditions.filter((item) => item.trim() !== "" && item.toLowerCase() !== "none").length > 0
+          ? "Next"
+          : "Skip"}
+      </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 10 },
-                  webCursorStyle as any,
-                ]}
-                onPress={prevStep}
-              >
-                <Text style={styles.primaryBtnText}> ← Back </Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }, webCursorStyle as any]} onPress={prevStep}>
+            <Text style={styles.primaryBtnText}> ← Back </Text>
+          </TouchableOpacity>
             </View>
           </Animated.View>
         )}
@@ -665,9 +494,7 @@ export default function Info() {
           <Animated.View style={{ alignItems: "center", width: "100%" }}>
             <View style={styles.content}>
               <Image source={kidEating} style={styles.kid} />
-              <Text style={styles.heading}>
-                Drop your email so we can stay in touch! 📬
-              </Text>
+              <Text style={styles.heading}>Drop your email so we can stay in touch! 📬</Text>
               <TextInput
                 placeholder="Email"
                 value={email}
@@ -677,15 +504,9 @@ export default function Info() {
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="none"
               />
-              {errors.email ? (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              ) : null}
+              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
               <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 20 },
-                  webCursorStyle as any,
-                ]}
+                style={[styles.primaryBtn, { marginTop: 20 }, webCursorStyle as any]}
                 onPress={async () => {
                   if (validateStep()) {
                     const ok = await checkEmail();
@@ -695,45 +516,24 @@ export default function Info() {
               >
                 <Text style={styles.primaryBtnText}> Next → </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 10 },
-                  webCursorStyle as any,
-                ]}
-                onPress={prevStep}
-              >
-                <Text style={styles.primaryBtnText}> ← Back </Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }, webCursorStyle as any]} onPress={prevStep}>
+            <Text style={styles.primaryBtnText}> ← Back </Text>
+          </TouchableOpacity>
             </View>
           </Animated.View>
         )}
 
         {step === 10 && (
-          <Animated.View
-            style={{ alignItems: "center", width: "100%", marginTop: -5 }}
-          >
+          <Animated.View style={{ alignItems: "center", width: "100%", marginTop: -5 }}>
             <View style={styles.content}>
               <Image source={kidEating} style={styles.kid} />
               <Text style={styles.heading}>Choose a strong password.</Text>
               <Text style={styles.passwordCriteria}>• 6-20 characters</Text>
               <Text style={styles.passwordCriteria}>• At least one number</Text>
-              <Text style={styles.passwordCriteria}>
-                • At least one uppercase letter
-              </Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  width: "113%",
-                }}
-              >
+              <Text style={styles.passwordCriteria}>• At least one uppercase letter</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", width: "113%" }}>
                 <TextInput
-                  style={[
-                    styles.input,
-                    errors.password ? styles.inputError : null,
-                    { flex: 1, paddingRight: 40 },
-                  ]}
+                  style={[styles.input, errors.password ? styles.inputError : null, { flex: 1, paddingRight: 40 }]}
                   placeholder="Password"
                   placeholderTextColor="#9CA3AF"
                   value={password}
@@ -742,29 +542,13 @@ export default function Info() {
                   autoCapitalize="none"
                 />
               </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 15 },
-                  webCursorStyle as any,
-                ]}
-                onPress={handleSubmit}
-              >
+              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 15 }, webCursorStyle as any]} onPress={handleSubmit}>
                 <Text style={styles.primaryBtnText}>Finish</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.primaryBtn,
-                  { marginTop: 10 },
-                  webCursorStyle as any,
-                ]}
-                onPress={prevStep}
-              >
-                <Text style={styles.primaryBtnText}> ← Back </Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { marginTop: 10 }, webCursorStyle as any]} onPress={prevStep}>
+            <Text style={styles.primaryBtnText}> ← Back </Text>
+          </TouchableOpacity>
             </View>
           </Animated.View>
         )}

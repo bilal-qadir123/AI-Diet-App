@@ -8,30 +8,39 @@ import {
   Alert,
   Image,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { styles } from "../styles/Info";
 import HomeBackground from "@/styles/HomeBackground";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
+import { useAuth } from "./context/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const { login,  user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/main");
+    }
+  }, [user, router]);
 
   const validate = () => {
     const newErrors: any = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       newErrors.email = "Enter a valid email";
-    if (password.length < 6)
-      newErrors.password = "Password must be at least 6 characters";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async () => {
+    await login(email, password);
+    if (user) router.replace("/main");
     if (validate()) {
       try {
-        const response = await fetch("http://localhost:5000/login", {
+        const response = await fetch("http://localhost:5000/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),

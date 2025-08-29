@@ -3,6 +3,7 @@ import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_700Bold } from "@
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { Asset } from "expo-asset";
+import { AuthProvider } from "./context/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -47,5 +48,15 @@ export default function RootLayout() {
 
   if (!fontsLoaded || !assetsLoaded) return null;
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="info" />
+
+        <Stack.Screen name="(protected)" options={{ headerShown: false }} />
+      </Stack>
+    </AuthProvider>
+  );
 }

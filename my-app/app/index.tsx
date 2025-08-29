@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { View, Animated, StyleSheet, Image } from "react-native";
+import { View, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import { styles } from "../styles/Index";
 export default function Index() {
@@ -26,7 +26,7 @@ export default function Index() {
 
     const timer = setTimeout(() => router.replace("/home"), 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [opacity, router]);
 
   return (
     <View style={styles.container}>
