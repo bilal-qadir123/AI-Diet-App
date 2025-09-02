@@ -27,7 +27,7 @@ export default function Info() {
   const [showPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const router = useRouter();
 
   const totalSteps = 11;
@@ -260,7 +260,7 @@ export default function Info() {
     if (validateStep()) {
       try {
         if (healthConditions.length === 0) setHealthConditions(["None"]);
-        await fetch("http://localhost:5000/receive-info", {
+        const response = await fetch("http://localhost:5000/receive-info", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -271,6 +271,8 @@ export default function Info() {
             height,
             activityLevel,
             primaryGoal,
+            weightGoal: 60,
+            timeFrame: 1,
             diet,
             allergies,
             healthConditions: healthConditions.length ? healthConditions : ["None"],
@@ -278,12 +280,19 @@ export default function Info() {
             password,
           }),
         });
-        nextStep();
-      } catch {
-        Alert.alert("Error", "Failed to submit your information.");
+        const data = await response.json();
+
+      if (response.ok) {
+        await login(email, password);
+        router.replace("/main");
+      } else {
+        Alert.alert("Error", data.error || "Registration failed");
       }
+    } catch {
+      Alert.alert("Error", "Failed to submit your information.");
     }
-  }, [validateStep, healthConditions, name, age, gender, weight, height, activityLevel, primaryGoal, diet, allergies, email, password, nextStep]);
+    }
+  }, [validateStep, healthConditions, name, age, gender, weight, height, activityLevel, primaryGoal, diet, allergies, email, password, login, router]);
 
   const webCursorStyle = useMemo(() => (Platform.OS === "web" ? { cursor: "pointer" } : null), []);
 
