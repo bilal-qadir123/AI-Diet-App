@@ -54,7 +54,7 @@ export const MealCard = ({ meal, onUpdate, onDelete, waterGlassesConsumed }) => 
           {meal.meal_type !== "water" && (
             <Text style={styles.mealDetails}>
             {meal.calories * meal.servings} Kcal • {meal.protein * meal.servings}g Protein • {meal.carbs * meal.servings}g Carbs • {meal.fat * meal.servings}g Fat
-          </Text>          
+          </Text>
           )}
         </View>
 
