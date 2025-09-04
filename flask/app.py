@@ -4,6 +4,7 @@ from config import Config
 from extensions import jwt
 from routes.user_routes import user_bp
 from routes.auth_routes import auth_bp
+from routes.food_routes import food_bp
 
 def create_app():
     app = Flask(__name__)
@@ -13,6 +14,7 @@ def create_app():
 
     app.register_blueprint(user_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(food_bp)
 
     return app
 

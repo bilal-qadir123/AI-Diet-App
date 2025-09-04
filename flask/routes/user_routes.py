@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.user_service import UserService
 from services.nutrition_service import NutritionService
+from services.food_service import FoodService
 from models.user_model import UserModel
 
 user_bp = Blueprint("user", __name__)
@@ -33,3 +35,25 @@ def receive_info():
     user = UserModel.get_by_email(data["email"])
     nutrition_profile = NutritionService.calculate_nutrition(data, user["id"])
     return jsonify({"exists": False, "message": "User created successfully", "token": access_token}), 201
+
+@user_bp.route("/log", methods=["POST"])
+@jwt_required()
+def log_food():
+    print("LOGGING FOOD")
+    current_user_email = get_jwt_identity()
+    user = UserService.get_user_by_email(current_user_email)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    data = request.get_json()
+
+    required_fields = ["name", "calories", "protein", "carbs", "fat", "mealType", "timestamp"]
+    missing = [field for field in required_fields if field not in data]
+    if missing:
+        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+
+    try:
+        FoodService.log_food(user["id"], data)
+        return jsonify({"success": True, "message": "Food entry logged"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

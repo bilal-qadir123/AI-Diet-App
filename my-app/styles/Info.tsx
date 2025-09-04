@@ -89,7 +89,7 @@ export const styles = StyleSheet.create({
     width: "100%",
   },
   pickerWrapper: {
-    width: 230,
+    width: 227,
     borderRadius: 20,
     backgroundColor: "#F3F4F6",
     overflow: "hidden",
