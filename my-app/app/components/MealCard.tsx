@@ -53,8 +53,8 @@ export const MealCard = ({ meal, onUpdate, onDelete, waterGlassesConsumed }) => 
           </Text>
           {meal.meal_type !== "water" && (
             <Text style={styles.mealDetails}>
-              {meal.calories} Kcal • {meal.protein}g Protein • {meal.carbs}g Carbs • {meal.fat}g Fat
-            </Text>
+            {meal.calories * meal.servings} Kcal • {meal.protein * meal.servings}g Protein • {meal.carbs * meal.servings}g Carbs • {meal.fat * meal.servings}g Fat
+          </Text>          
           )}
         </View>
 
@@ -93,7 +93,7 @@ export const MealCard = ({ meal, onUpdate, onDelete, waterGlassesConsumed }) => 
           {showCheckmark && (
             <TouchableOpacity onPress={handleConfirm} style={styles.confirmButton}>
               <Ionicons name="checkmark" size={16} color="white" />
-              <Text style={[styles.confirmButtonText, { fontFamily: "Outfit_500Medium" }]}>Save</Text>
+              <Text style={[styles.confirmButtonText, { fontFamily: "Outfit_500Medium", fontSize: 14 }]}>Save</Text>
             </TouchableOpacity>
           )}
         </View>

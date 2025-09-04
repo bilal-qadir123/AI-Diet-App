@@ -326,16 +326,17 @@ export default function Dashboard() {
     () =>
       meals.reduce(
         (acc, f) => {
-          acc.calories += Number(f.calories || 0);
-          acc.protein += Number(f.protein || 0);
-          acc.carbs += Number(f.carbs || 0);
-          acc.fat += Number(f.fat || 0);
+          const servings = Number(f.servings || 1);
+          acc.calories += (Number(f.calories) || 0) * servings;
+          acc.protein += (Number(f.protein) || 0) * servings;
+          acc.carbs += (Number(f.carbs) || 0) * servings;
+          acc.fat += (Number(f.fat) || 0) * servings;
           return acc;
         },
         { calories: 0, protein: 0, carbs: 0, fat: 0 }
       ),
     [meals]
-  );
+  );  
 
   const groupedByMealType = useMemo(() => {
     const groups: Record<string, any[]> = { breakfast: [], lunch: [], dinner: [], snack: [] };
@@ -620,20 +621,33 @@ export default function Dashboard() {
                         </Text>
                       </View>
                       <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-                        <View style={styles.foodActions}>
-                          <TouchableOpacity style={styles.quantityButton} onPress={() => setNumber(number + 1)}>
-                            {number === 0 ? <Ionicons name="add" size={20} color="#4F46E5" /> : <Text style={{ color: "#4F46E5", fontWeight: "bold" }}>{number}</Text>}
-                          </TouchableOpacity>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        {number > 0 && (
                           <TouchableOpacity
-                            style={styles.addFoodButton}
-                            onPress={() => {
-                              handleAddFood(item);
-                            }}
+                            style={[styles.quantityButton, { marginRight: 8 }]}
+                            onPress={() => setNumber(number - 1)}
                           >
-                            <Ionicons name="checkmark" size={20} color="white" />
+                            <Ionicons name="remove" size={20} color="#4F46E5" />
                           </TouchableOpacity>
-                        </View>
-                      </Animated.View>
+                        )}
+                        <TouchableOpacity
+                          style={styles.quantityButton}
+                          onPress={() => setNumber(number + 1)}
+                        >
+                          {number === 0 ? (
+                            <Ionicons name="add" size={20} color="#4F46E5" />
+                          ) : (
+                            <Text style={{ color: "#4F46E5", fontWeight: "bold" }}>{number}</Text>
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.addFoodButton, { marginLeft: 8 }]}
+                          onPress={() => handleAddFood(item)}
+                        >
+                          <Ionicons name="checkmark" size={20} color="white" />
+                        </TouchableOpacity>
+                      </View>
+                    </Animated.View>
                     </View>
                   </View>
                 )}
